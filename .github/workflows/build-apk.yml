@@ -8,11 +8,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build APK using Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        with:
-          buildozer_spec: buildozer.spec
-          buildozer_verbose: true
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip python3-venv openjdk-11-jdk unzip wget git
+
+      - name: Install buildozer
+        run: |
+          pip3 install buildozer
+
+      - name: Build APK
+        run: |
+          buildozer android debug deploy run || true
+          cd ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
+          yes | ./sdkmanager --licenses
+          cd $GITHUB_WORKSPACE
+          buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
