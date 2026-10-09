@@ -24,8 +24,10 @@ jobs:
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip commandlinetools-linux-9477386_latest.zip -d cmdline-tools
           mv cmdline-tools/cmdline-tools cmdline-tools/latest
+          # 建立旧版tools软链接，欺骗buildozer
+          ln -s cmdline-tools/latest tools
 
-      - name: Accept all Android SDK licenses
+      - name: Accept licenses & install SDK
         run: |
           cd ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
           yes | ./sdkmanager --licenses
