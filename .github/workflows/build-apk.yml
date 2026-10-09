@@ -17,11 +17,22 @@ jobs:
         run: |
           pip3 install buildozer
 
-      - name: Build APK
+      - name: Download Android SDK cmdline tools
         run: |
-          buildozer android debug deploy run || true
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          cd ~/.buildozer/android/platform/android-sdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip commandlinetools-linux-9477386_latest.zip -d cmdline-tools
+          mv cmdline-tools/cmdline-tools cmdline-tools/latest
+
+      - name: Accept all Android SDK licenses
+        run: |
           cd ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
           yes | ./sdkmanager --licenses
+          yes | ./sdkmanager "platforms;android-32" "build-tools;32.0.0" "ndk;25.2.9519653"
+
+      - name: Build APK
+        run: |
           cd $GITHUB_WORKSPACE
           buildozer android debug
 
