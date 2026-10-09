@@ -1,59 +1,50 @@
-name: Build Kivy APK
-
+name: Buildozer APK Build
 on:
-  workflow_dispatch
+  push:
+    branches: [ main ]
+  workflow_dispatch: # 支持手动点击触发打包
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
-
+  build-apk:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3 python3-pip python3-venv openjdk-11-jdk unzip wget git zip
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk libffi-dev libssl-dev autoconf automake libtool pkg-config
 
-      - name: Install buildozer
+      - name: Install buildozer + pinned python-for-android
         run: |
-          pip3 install buildozer
+          python -m pip install --upgrade pip
+          # 锁定python-for-android版本，规避新版SDK路径bug
+          pip install buildozer python-for-android==2024.04.29
 
-      - name: Prepare Android SDK
+      - name: Buildozer init if buildozer.spec missing
         run: |
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          cd ~/.buildozer/android/platform/android-sdk
-
-          if [ ! -d "cmdline-tools/latest" ]; then
-            wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-            unzip -q cmdline-tools.zip -d cmdline-tools
-            mv cmdline-tools/cmdline-tools cmdline-tools/latest
+          if [ ! -f buildozer.spec ]; then
+            buildozer init
           fi
-
-          mkdir -p tools
-          ln -sf cmdline-tools/latest/bin tools/bin
-          ln -sf cmdline-tools/latest/lib tools/lib
-
-      - name: Accept licenses and install SDK components
-        run: |
-          export ANDROID_HOME=~/.buildozer/android/platform/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin:$PATH
-
-          yes | sdkmanager --licenses || true
-          yes | sdkmanager "platforms;android-32" "build-tools;32.0.0" "ndk;25.2.9519653" || true
 
       - name: Build APK
         run: |
-          export ANDROID_HOME=~/.buildozer/android/platform/android-sdk
-          export ANDROID_NDK_HOME=~/.buildozer/android/platform/android-sdk/ndk/25.2.9519653
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools/bin:$ANDROID_HOME/build-tools/32.0.0:$PATH
-
-          cd $GITHUB_WORKSPACE
+          buildozer android debug deploy run || true
+          # 修复 sdkmanager 路径问题：buildozer 去 tools/bin 找，新版SDK在 cmdline-tools/latest/bin
+          SDK_ROOT="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "${SDK_ROOT}/tools"
+          ln -s "${SDK_ROOT}/cmdline-tools/latest/bin" "${SDK_ROOT}/tools/bin"
+          # 重新执行打包
           buildozer android debug
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 加班工资计算器APK
+          name: kivy-apk
           path: bin/*.apk
