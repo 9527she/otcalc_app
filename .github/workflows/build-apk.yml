@@ -24,7 +24,6 @@ jobs:
       - name: Install buildozer + pinned python-for-android
         run: |
           python -m pip install --upgrade pip
-          # 锁定python-for-android版本，规避新版SDK路径bug
           pip install buildozer python-for-android==2024.04.29
 
       - name: Buildozer init if buildozer.spec missing
@@ -33,14 +32,16 @@ jobs:
             buildozer init
           fi
 
-      - name: Build APK
+      - name: Build APK & Fix sdkmanager path
         run: |
-          buildozer android debug deploy run || true
-          # 修复 sdkmanager 路径问题：buildozer 去 tools/bin 找，新版SDK在 cmdline-tools/latest/bin
+          set -e
+          # 第一次执行，让buildozer下载SDK/NDK
+          buildozer android debug || true
           SDK_ROOT="$HOME/.buildozer/android/platform/android-sdk"
+          # 创建软链接，把新版cmdline-tools映射到老路径tools/bin
           mkdir -p "${SDK_ROOT}/tools"
-          ln -s "${SDK_ROOT}/cmdline-tools/latest/bin" "${SDK_ROOT}/tools/bin"
-          # 重新执行打包
+          ln -sf "${SDK_ROOT}/cmdline-tools/latest/bin" "${SDK_ROOT}/tools/bin"
+          # 正式打包
           buildozer android debug
 
       - name: Upload APK artifact
