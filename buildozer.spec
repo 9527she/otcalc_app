@@ -5,7 +5,7 @@ package.domain = org.otcalc
 source.dir = .
 source.include_exts = py,json
 version = 0.1
-requirements = python3,kivy
+requirements = python3,kivy==2.3.0
 orientation = portrait
 fullscreen = 0
 android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
